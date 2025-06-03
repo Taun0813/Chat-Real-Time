@@ -116,30 +116,24 @@ Chat-Real-Time/
 │   │   │   └── com/chatapp/
 │   │   │       ├── ChatRealtimeApplication.java
 │   │   │       ├── config/
-│   │   │       │   ├── WebSocketConfig.java
-│   │   │       │   └── SecurityConfig.java
+│   │   │       │   ├── CorsConfig.java
+│   │   │       │   └── WebSocketConfig.java
 │   │   │       ├── controller/
 │   │   │       │   ├── ChatController.java
-│   │   │       │   ├── UserController.java
-│   │   │       │   └── WebSocketController.java
+│   │   │       │   ├── MessageController.java
 │   │   │       ├── model/
-│   │   │       │   ├── User.java
 │   │   │       │   ├── ChatMessage.java
-│   │   │       │   └── ChatRoom.java
+│   │   │       │   ├── MessageType.java
+│   │   │       │   └── User.java
 │   │   │       ├── repository/
 │   │   │       │   ├── UserRepository.java
 │   │   │       │   ├── ChatMessageRepository.java
-│   │   │       │   └── ChatRoomRepository.java
 │   │   │       └── service/
 │   │   │           ├── UserService.java
 │   │   │           ├── ChatService.java
-│   │   │           └── WebSocketService.java
 │   │   └── resources/
-│   │       ├── static/
-│   │       │   ├── css/
-│   │       │   ├── js/
-│   │       │   └── images/
-│   │       ├── templates/
+│   │       ├── ui/
+│   │       │   ├── index.html
 │   │       └── application.properties
 │   └── test/
 ├── pom.xml
@@ -174,6 +168,12 @@ Chat-Real-Time/
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+
+    <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
     </dependency>
     
     <!-- H2 Database -->
@@ -237,16 +237,20 @@ mvn jacoco:report
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        config.enableSimpleBroker("/topic", "/queue");
+
         config.setApplicationDestinationPrefixes("/app");
+
+        config.setUserDestinationPrefix("/user");
     }
-    
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").withSockJS();
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("http://localhost:63342")
+                .withSockJS();
     }
 }
 ```
@@ -284,7 +288,7 @@ Dự án này được phát hành dưới [MIT License](LICENSE).
 
 **Taun0813**
 - GitHub: [@Taun0813](https://github.com/Taun0813)
-- Email: [your.email@example.com](mailto:your.email@example.com)
+- Email: [yentuan130803@gmail.com]
 
 ## 🙏 Acknowledgments
 
@@ -324,16 +328,43 @@ Nếu bạn phát hiện lỗi, vui lòng tạo [issue](https://github.com/Taun0
 ## 🔍 API Endpoints
 
 ### REST Endpoints
-- `GET /api/users` - Lấy danh sách users
-- `POST /api/auth/login` - Đăng nhập
-- `POST /api/auth/register` - Đăng ký
-- `GET /api/chatrooms` - Lấy danh sách phòng chat
+- `GET /api/messages/{roomId}?limit=50` – Lấy danh sách tin nhắn gần nhất trong phòng
+  
+- `GET /api/users` – Lấy danh sách tất cả users
+  
+- `GET /api/users/online` – Lấy danh sách người dùng đang online
+  
+- `GET /api/users/room/{roomId}` – Lấy danh sách người dùng trong phòng
+  
+- `POST /api/users` – Tạo hoặc cập nhật user
+  
+- `POST /api/auth/login` – Đăng nhập
+  
+- `POST /api/auth/register` – Đăng ký
+  
+- `GET /api/chatrooms` – Lấy danh sách phòng chat
+
+- `GET /api/stats` – Lấy thông tin thống kê (số lượng tin nhắn, người online)
 
 ### WebSocket Endpoints  
-- `/ws` - WebSocket connection endpoint
-- `/app/chat.sendMessage` - Gửi tin nhắn
-- `/app/chat.addUser` - Thêm user vào phòng
-- `/topic/public` - Subscribe tin nhắn công khai
+
+- `/ws` – WebSocket connection endpoint (STOMP/WebSocket handshake endpoint)
+
+- `/app/chat.sendMessage` – Gửi tin nhắn
+
+- `/app/chat.addUser` – Thêm user vào phòng chat
+
+- `/app/chat.typing` – Báo hiệu đang gõ
+
+- `/app/chat.stopTyping` – Báo hiệu ngừng gõ
+
+- `/topic/public` – Subscribe để nhận tin nhắn công khai
+
+- `/topic/typing{roomId}` – Subscribe để biết ai đang gõ trong phòng
+
+- `/topic/stopTyping/{roomId}` – Subscribe khi ai đó ngừng gõ
+
+- `/topic/userCount/{roomId}` – Subscribe để theo dõi số người trong phòng
 
 ---
 

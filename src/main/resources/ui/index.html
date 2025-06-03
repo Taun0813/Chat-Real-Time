@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Boot Chat System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: 80vh;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .connection-status {
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.own {
+            flex-direction: row-reverse;
+        }
+
+        .message.system {
+            justify-content: center;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+        }
+
+        .message.system .message-content {
+            background: #e9ecef;
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .message:not(.own):not(.system) .message-content {
+            background: white;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .message.own .message-content {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .message.own .message-info {
+            color: rgba(255,255,255,0.8);
+            text-align: right;
+        }
+
+        .message-text {
+            line-height: 1.4;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .typing-indicator {
+            padding: 12px 20px;
+            font-style: italic;
+            color: #666;
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .user-form {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #667eea;
+        }
+
+        .connect-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .connect-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .connect-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .online-users {
+            flex: 1;
+        }
+
+        .user-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .user-item {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stats h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .config-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .sidebar {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="config-info">
+    <strong>🔧 Spring Boot Chat Backend</strong><br>
+    Server: http://localhost:8080<br>
+    WebSocket: /ws endpoint
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="user-form">
+            <h3>🔗 Kết nối Chat</h3>
+            <div class="form-group">
+                <label for="serverUrl">Server URL:</label>
+                <input type="text" id="serverUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+            </div>
+            <div class="form-group">
+                <label for="username">Tên người dùng:</label>
+                <input type="text" id="username" placeholder="Nhập tên của bạn..." maxlength="20">
+            </div>
+            <div class="form-group">
+                <label for="roomId">Phòng chat:</label>
+                <select id="roomId">
+                    <option value="general">🏠 General</option>
+                    <option value="random">🎲 Random</option>
+                    <option value="tech">💻 Tech Talk</option>
+                    <option value="gaming">🎮 Gaming</option>
+                </select>
+            </div>
+            <button id="connectButton" class="connect-button">Kết nối</button>
+        </div>
+
+        <div class="stats">
+            <h4>📊 Thống kê</h4>
+            <div class="stat-item">
+                <span>Tin nhắn:</span>
+                <span id="messageCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Online:</span>
+                <span id="onlineCount">0</span>
+            </div>
+        </div>
+
+        <div class="online-users">
+            <h3>👥 Người dùng online</h3>
+            <ul id="userList" class="user-list">
+                <li class="user-item">
+                    <span class="user-status"></span>
+                    <span>Chưa có người dùng nào</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">💬 Spring Boot Chat</div>
+            <div class="room-info">
+                <span id="currentRoom">Chưa kết nối</span>
+            </div>
+        </div>
+
+        <div id="connectionStatus" class="connection-status disconnected">
+            ❌ Chưa kết nối đến server
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message system">
+                <div class="message-content">
+                    <div class="message-text">Chào mừng đến với Spring Boot Chat System! 🚀</div>
+                </div>
+            </div>
+            <div class="message system">
+                <div class="message-content">
+                    <div class="message-text">Nhập thông tin bên trái để kết nối đến server</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="typingIndicator" class="typing-indicator" style="display: none;">
+            <span class="typing-dots">💭 Ai đó đang nhập tin nhắn...</span>
+        </div>
+
+        <div class="chat-input-container">
+            <input
+                    type="text"
+                    id="messageInput"
+                    class="message-input"
+                    placeholder="Nhập tin nhắn của bạn..."
+                    maxlength="500"
+                    disabled
+            >
+            <button id="sendButton" class="send-button" disabled>Gửi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global variables
+    let stompClient = null;
+    let connected = false;
+    let currentUser = '';
+    let currentRoomId = '';
+    let typingTimeout = null;
+    let isTyping = false;
+
+    // DOM elements
+    const serverUrlInput = document.getElementById('serverUrl');
+    const usernameInput = document.getElementById('username');
+    const roomIdSelect = document.getElementById('roomId');
+    const connectButton = document.getElementById('connectButton');
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const currentRoomSpan = document.getElementById('currentRoom');
+    const userList = document.getElementById('userList');
+    const messageCount = document.getElementById('messageCount');
+    const onlineCount = document.getElementById('onlineCount');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    // Initialize
+    usernameInput.value = 'User_' + Math.floor(Math.random() * 1000);
+
+    // Event listeners
+    connectButton.addEventListener('click', toggleConnection);
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', handleKeyPress);
+    messageInput.addEventListener('input', handleTyping);
+
+    function toggleConnection() {
+        if (connected) {
+            disconnect();
+        } else {
+            connect();
+        }
+    }
+
+    function connect() {
+        const serverUrl = serverUrlInput.value.trim();
+        const username = usernameInput.value.trim();
+        const roomId = roomIdSelect.value;
+
+        if (!serverUrl || !username) {
+            alert('Vui lòng nhập đầy đủ thông tin!');
+            return;
+        }
+
+        currentUser = username;
+        currentRoomId = roomId;
+
+        // Update UI
+        updateConnectionStatus('connecting', '🔄 Đang kết nối...');
+        connectButton.disabled = true;
+
+        // Create SockJS connection
+        const socket = new SockJS(serverUrl + '/ws');
+        stompClient = Stomp.over(socket);
+
+        // Disable console logging
+        stompClient.debug = null;
+
+        stompClient.connect({}, onConnected, onError);
+    }
+
+    function onConnected() {
+        connected = true;
+        updateConnectionStatus('connected', '✅ Đã kết nối đến server');
+
+        // Update UI
+        connectButton.textContent = 'Ngắt kết nối';
+        connectButton.disabled = false;
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        currentRoomSpan.textContent = `Phòng: ${currentRoomId}`;
+
+        // Subscribe to topics
+        stompClient.subscribe('/topic/public', onMessageReceived);
+        stompClient.subscribe('/topic/typing/' + currentRoomId, onTypingReceived);
+        stompClient.subscribe('/topic/stopTyping/' + currentRoomId, onStopTypingReceived);
+        stompClient.subscribe('/topic/userCount/' + currentRoomId, onUserCountReceived);
+
+        // Send join message
+        const joinMessage = {
+            sender: currentUser,
+            type: 'JOIN',
+            content: currentUser + ' đã tham gia chat!',
+            roomId: currentRoomId
+        };
+
+        stompClient.send('/app/chat.addUser', {}, JSON.stringify(joinMessage));
+
+        // Load message history
+        loadMessageHistory();
+        loadStats();
+
+        // Focus message input
+        messageInput.focus();
+
+        addSystemMessage(`Bạn đã tham gia phòng ${currentRoomId}`);
+    }
+
+    function onError(error) {
+        console.error('Connection error:', error);
+        updateConnectionStatus('disconnected', '❌ Lỗi kết nối đến server');
+        connectButton.disabled = false;
+        connected = false;
+    }
+
+    function disconnect() {
+        if (stompClient && connected) {
+            // Send leave message
+            const leaveMessage = {
+                sender: currentUser,
+                type: 'LEAVE',
+                content: currentUser + ' đã rời khỏi chat!',
+                roomId: currentRoomId
+            };
+
+            stompClient.send('/app/chat.sendMessage', {}, JSON.stringify(leaveMessage));
+            stompClient.disconnect();
+        }
+
+        connected = false;
+        updateConnectionStatus('disconnected', '❌ Đã ngắt kết nối');
+
+        // Update UI
+        connectButton.textContent = 'Kết nối';
+        connectButton.disabled = false;
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        currentRoomSpan.textContent = 'Chưa kết nối';
+
+        addSystemMessage('Bạn đã ngắt kết nối khỏi server');
+    }
+
+    function sendMessage() {
+        const messageContent = messageInput.value.trim();
+
+        if (messageContent && stompClient && connected) {
+            const message = {
+                sender: currentUser,
+                content: messageContent,
+                type: 'CHAT',
+                roomId: currentRoomId
+            };
+
+            stompClient.send('/app/chat.sendMessage', {}, JSON.stringify(message));
+            messageInput.value = '';
+
+            // Stop typing
+            if (isTyping) {
+                stopTyping();
+            }
+        }
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    function handleTyping() {
+        if (!connected || !stompClient) return;
+
+        if (!isTyping) {
+            isTyping = true;
+            const typingMessage = {
+                sender: currentUser,
+                type: 'TYPING',
+                roomId: currentRoomId
+            };
+            stompClient.send('/app/chat.typing', {}, JSON.stringify(typingMessage));
+        }
+
+        // Clear existing timeout
+        clearTimeout(typingTimeout);
+
+        // Set new timeout
+        typingTimeout = setTimeout(() => {
+            stopTyping();
+        }, 1000);
+    }
+
+    function stopTyping() {
+        if (isTyping && connected && stompClient) {
+            isTyping = false;
+            const stopTypingMessage = {
+                sender: currentUser,
+                type: 'STOP_TYPING',
+                roomId: currentRoomId
+            };
+            stompClient.send('/app/chat.stopTyping', {}, JSON.stringify(stopTypingMessage));
+        }
+    }
+
+    function onMessageReceived(payload) {
+        const message = JSON.parse(payload.body);
+
+        if (message.type === 'CHAT') {
+            displayMessage(message.sender, message.content, message.timestamp, message.sender === currentUser);
+        } else if (message.type === 'JOIN') {
+            if (message.sender !== currentUser) {
+                addSystemMessage(`${message.sender} đã tham gia chat`);
+            }
+        } else if (message.type === 'LEAVE') {
+            if (message.sender !== currentUser) {
+                addSystemMessage(`${message.sender} đã rời khỏi chat`);
+            }
+        }
+
+        // Update stats
+        loadStats();
+    }
+
+    function onTypingReceived(payload) {
+        const message = JSON.parse(payload.body);
+        if (message.sender !== currentUser) {
+            showTypingIndicator(message.sender);
+        }
+    }
+
+    function onStopTypingReceived(payload) {
+        hideTypingIndicator();
+    }
+
+    function onUserCountReceived(payload) {
+        const count = JSON.parse(payload.body);
+        onlineCount.textContent = count;
+    }
+
+    function displayMessage(sender, content, timestamp, isOwn = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isOwn ? 'own' : ''}`;
+
+        const time = timestamp ? new Date(timestamp).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : new Date().toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-info">${escapeHtml(sender)}</div>
+                    <div class="message-text">${escapeHtml(content)}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    function addSystemMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message system';
+        messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-text">${escapeHtml(message)}</div>
+                </div>
+            `;
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    function showTypingIndicator(username) {
+        typingIndicator.querySelector('.typing-dots').textContent = `💭 ${username} đang nhập tin nhắn...`;
+        typingIndicator.style.display = 'block';
+        scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+        typingIndicator.style.display = 'none';
+    }
+
+    function updateConnectionStatus(status, message) {
+        connectionStatus.textContent = message;
+        connectionStatus.className = `connection-status ${status}`;
+    }
+
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async function loadMessageHistory() {
+        try {
+            const response = await fetch(`${serverUrlInput.value}/api/messages/${currentRoomId}?limit=20`);
+            if (response.ok) {
+                const messages = await response.json();
+                messages.reverse().forEach(message => {
+                    if (message.type === 'CHAT') {
+                        displayMessage(message.sender, message.content, message.timestamp, message.sender === currentUser);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error loading message history:', error);
+        }
+    }
+
+    async function loadStats() {
+        try {
+            const response = await fetch(`${serverUrlInput.value}/api/stats`);
+            if (response.ok) {
+                const stats = await response.json();
+                messageCount.textContent = stats.totalMessages;
+                onlineCount.textContent = stats.onlineUsers;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+
+    // Update user list periodically
+    setInterval(async () => {
+        if (connected) {
+            try {
+                const response = await fetch(`${serverUrlInput.value}/api/users/room/${currentRoomId}`);
+                if (response.ok) {
+                    const users = await response.json();
+                    updateUserList(users);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+    }, 5000);
+
+    function updateUserList(users) {
+        userList.innerHTML = '';
+
+        if (users.length === 0) {
+            userList.innerHTML = `
+                    <li class="user-item">
+                        <span class="user-status"></span>
+                        <span>Chưa có người dùng nào</span>
+                    </li>
+                `;
+            return;
+        }
+
+        users.forEach(user => {
+            const li = document.createElement('li');
+            li.className = 'user-item';
+            li.innerHTML = `
+                    <span class="user-status"></span>
+                    <span>${escapeHtml(user.displayName || user.username)}</span>
+                `;
+            userList.appendChild(li);
+        });
+    }
+
+    // Handle page unload
+    window.addEventListener('beforeunload', () => {
+        if (connected) {
+            disconnect();
+        }
+    });
+</script>
+
+<!--&lt;!&ndash; Configuration Section &ndash;&gt;-->
+<!--<div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 15px; border-radius: 10px; font-size: 12px; max-width: 350px;">-->
+<!--    <h4 style="color: #667eea; margin-bottom: 10px;">📋 Cấu hình pom.xml</h4>-->
+<!--    <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 10px;">-->
+<!--&lt;dependencies&gt;-->
+<!--    &lt;dependency&gt;-->
+<!--        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;-->
+<!--        &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;-->
+<!--    &lt;/dependency&gt;-->
+<!--    &lt;dependency&gt;-->
+<!--        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;-->
+<!--        &lt;artifactId&gt;spring-boot-starter-websocket&lt;/artifactId&gt;-->
+<!--    &lt;/dependency&gt;-->
+<!--    &lt;dependency&gt;-->
+<!--        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;-->
+<!--        &lt;artifactId&gt;spring-boot-starter-data-jpa&lt;/artifactId&gt;-->
+<!--    &lt;/dependency&gt;-->
+<!--    &lt;dependency&gt;-->
+<!--        &lt;groupId&gt;com.h2database&lt;/groupId&gt;-->
+<!--        &lt;artifactId&gt;h2&lt;/artifactId&gt;-->
+<!--        &lt;scope&gt;runtime&lt;/scope&gt;-->
+<!--    &lt;/dependency&gt;-->
+<!--&lt;/dependencies&gt;-->
+<!--        </pre>-->
+<!--    <p style="margin-top: 10px; font-size: 11px;">💡 Chạy: <code>mvn spring-boot:run</code></p>-->
+<!--</div>-->
+</body>
+</html>

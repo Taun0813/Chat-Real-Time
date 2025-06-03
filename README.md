@@ -1,41 +1,46 @@
-# Chat Real-Time
+# 💬 Chat Real-Time
 
-Ứng dụng chat thời gian thực được xây dựng với công nghệ hiện đại, cho phép người dùng trò chuyện trực tiếp với nhau một cách mượt mà và nhanh chóng.
+Ứng dụng chat thời gian thực được xây dựng với Spring Boot và H2 Database, cho phép người dùng trò chuyện trực tiếp với nhau một cách mượt mà và nhanh chóng.
 
 ## ✨ Tính năng
 
-- 💬 Chat thời gian thực
-- 👥 Hỗ trợ nhiều người dùng
-- 🔔 Thông báo tin nhắn mới
-- 📱 Giao diện responsive
-- 🎨 UI/UX thân thiện
-- 🔒 Bảo mật tin nhắn
-- 📸 Chia sẻ hình ảnh (nếu có)
-- 😊 Emoji và reactions (nếu có)
+- 💬 **Chat thời gian thực** - Trò chuyện tức thời không độ trễ
+- 👥 **Hỗ trợ nhiều người dùng** - Chat nhóm và chat riêng tư
+- 🔔 **Thông báo tin nhắn mới** - Nhận thông báo khi có tin nhắn mới
+- 📱 **Giao diện responsive** - Tương thích trên mọi thiết bị
+- 🎨 **UI/UX thân thiện** - Giao diện đẹp mắt, dễ sử dụng
+- 🔒 **Bảo mật tin nhắn** - Xác thực và phân quyền người dùng
+- 📸 **Chia sẻ hình ảnh** - Gửi và nhận hình ảnh trong chat
+- 😊 **Emoji và reactions** - Thể hiện cảm xúc với emoji
 
 ## 🛠️ Công nghệ sử dụng
 
-### Frontend
-- HTML5
-- CSS3
-- JavaScript
-- [Framework/Library khác nếu có]
-
 ### Backend
-- Node.js
-- Express.js
-- Socket.IO
-- [Database: MongoDB/MySQL/PostgreSQL]
+- **Java 17+**
+- **Spring Boot 3.x**
+- **Spring WebSocket** - Real-time communication
+- **Spring Security** - Authentication & Authorization
+- **Spring Data JPA** - Database operations
+- **H2 Database** - In-memory database
+- **Maven** - Dependency management
 
-### Realtime Communication
-- Socket.IO
-- WebSocket
+### Frontend
+- **HTML5**
+- **CSS3**
+- **JavaScript (ES6+)**
+- **Bootstrap** (nếu có)
+- **SockJS** & **STOMP** - WebSocket client
+
+### Real-time Communication
+- **Spring WebSocket**
+- **STOMP Protocol**
+- **SockJS** fallback
 
 ## 📋 Yêu cầu hệ thống
 
-- Node.js >= 14.0.0
-- npm >= 6.0.0
-- [Database] >= [version]
+- **Java** >= 17
+- **Maven** >= 3.6.0
+- **IDE**: IntelliJ IDEA, Eclipse, hoặc VS Code
 
 ## 🚀 Cài đặt và chạy dự án
 
@@ -49,72 +54,227 @@ cd Chat-Real-Time
 ### 2. Cài đặt dependencies
 
 ```bash
-npm install
+mvn clean install
 ```
 
-### 3. Cấu hình môi trường
+### 3. Cấu hình ứng dụng
 
-Tạo file `.env` trong thư mục gốc:
+File `application.properties` hoặc `application.yml`:
 
-```env
-PORT=3000
-DATABASE_URL=your_database_connection_string
-JWT_SECRET=your_jwt_secret_key
+```properties
+# Server Configuration
+server.port=8080
+
+# H2 Database Configuration
+spring.datasource.url=jdbc:h2:mem:chatdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+
+# H2 Console (for development)
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+# JPA Configuration
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# WebSocket Configuration
+spring.websocket.sockjs.heartbeat.time=25000
 ```
 
 ### 4. Chạy ứng dụng
 
-#### Development mode:
+**Sử dụng Maven:**
 ```bash
-npm run dev
+mvn spring-boot:run
 ```
 
-#### Production mode:
+**Hoặc chạy từ IDE:**
+- Import project vào IDE
+- Chạy main class `ChatRealtimeApplication.java`
+
+**Sử dụng JAR file:**
 ```bash
-npm start
+mvn clean package
+java -jar target/chat-realtime-0.0.1-SNAPSHOT.jar
 ```
 
-Ứng dụng sẽ chạy tại: `http://localhost:3000`
+Ứng dụng sẽ chạy tại: [http://localhost:8080](http://localhost:8080)
 
-## 📁 Cấu trúc thư mục
+**H2 Database Console:** [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
+
+## 📁 Cấu trúc dự án
 
 ```
 Chat-Real-Time/
-├── public/
-│   ├── css/
-│   ├── js/
-│   └── images/
 ├── src/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   └── middleware/
-├── views/
-├── server.js
-├── package.json
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/chatapp/
+│   │   │       ├── ChatRealtimeApplication.java
+│   │   │       ├── config/
+│   │   │       │   ├── WebSocketConfig.java
+│   │   │       │   └── SecurityConfig.java
+│   │   │       ├── controller/
+│   │   │       │   ├── ChatController.java
+│   │   │       │   ├── UserController.java
+│   │   │       │   └── WebSocketController.java
+│   │   │       ├── model/
+│   │   │       │   ├── User.java
+│   │   │       │   ├── ChatMessage.java
+│   │   │       │   └── ChatRoom.java
+│   │   │       ├── repository/
+│   │   │       │   ├── UserRepository.java
+│   │   │       │   ├── ChatMessageRepository.java
+│   │   │       │   └── ChatRoomRepository.java
+│   │   │       └── service/
+│   │   │           ├── UserService.java
+│   │   │           ├── ChatService.java
+│   │   │           └── WebSocketService.java
+│   │   └── resources/
+│   │       ├── static/
+│   │       │   ├── css/
+│   │       │   ├── js/
+│   │       │   └── images/
+│   │       ├── templates/
+│   │       └── application.properties
+│   └── test/
+├── pom.xml
 └── README.md
 ```
 
-## 🎮 Hướng dẫn sử dụng
+## 🔧 Dependencies chính
 
-1. Mở trình duyệt và truy cập `http://localhost:3000`
-2. Đăng ký tài khoản mới hoặc đăng nhập
-3. Bắt đầu chat với người dùng khác
-4. Thưởng thức trải nghiệm chat real-time!
+```xml
+<dependencies>
+    <!-- Spring Boot Starters -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-websocket</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    
+    <!-- H2 Database -->
+    <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    
+    <!-- WebJars for frontend libraries -->
+    <dependency>
+        <groupId>org.webjars</groupId>
+        <artifactId>sockjs-client</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.webjars</groupId>
+        <artifactId>stomp-websocket</artifactId>
+    </dependency>
+</dependencies>
+```
 
-## 📱 Screenshots
+## 🎯 Hướng dẫn sử dụng
 
-[Thêm screenshots của ứng dụng tại đây]
+1. **Khởi động ứng dụng**: Chạy `mvn spring-boot:run`
+
+2. **Truy cập ứng dụng**: Mở trình duyệt và truy cập `http://localhost:8080`
+
+3. **Xem database** (development): 
+   - Truy cập H2 Console tại `http://localhost:8080/h2-console`
+   - JDBC URL: `jdbc:h2:mem:chatdb`
+   - Username: `sa`, Password: `password`
+
+4. **Đăng ký/Đăng nhập**: 
+   - Tạo tài khoản mới hoặc đăng nhập
+   - Xác thực thông tin
+
+5. **Bắt đầu chat**:
+   - Tham gia phòng chat hoặc tạo phòng mới
+   - Gửi tin nhắn real-time với WebSocket
+   - Sử dụng emoji và chia sẻ hình ảnh
+
+## 🧪 Testing
+
+```bash
+# Chạy unit tests
+mvn test
+
+# Chạy integration tests  
+mvn verify
+
+# Test coverage report
+mvn jacoco:report
+```
+
+## 🔧 Configuration
+
+### WebSocket Configuration
+
+```java
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
+    }
+    
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").withSockJS();
+    }
+}
+```
+
+### H2 Database Schema
+
+Database sẽ được tự động tạo khi khởi động ứng dụng với các bảng:
+- `users` - Thông tin người dùng
+- `chat_rooms` - Phòng chat
+- `chat_messages` - Tin nhắn
+- `user_room_mapping` - Mapping user và room
 
 ## 🤝 Đóng góp
 
-Mọi đóng góp đều được chào đón! Vui lòng:
+Mọi đóng góp đều được chào đón! Để đóng góp:
 
-1. Fork repository
-2. Tạo branch mới (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
+1. **Fork** repository này
+2. **Tạo branch** mới (`git checkout -b feature/AmazingFeature`)
+3. **Commit** thay đổi (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** lên branch (`git push origin feature/AmazingFeature`)
+5. **Tạo Pull Request**
+
+### Quy tắc đóng góp
+
+- Tuân thủ Java coding conventions
+- Viết unit tests cho các tính năng mới
+- Cập nhật documentation khi cần thiết
+- Sử dụng Spring Boot best practices
 
 ## 📝 License
 
@@ -122,24 +282,59 @@ Dự án này được phát hành dưới [MIT License](LICENSE).
 
 ## 👨‍💻 Tác giả
 
-- **Taun0813** - [GitHub Profile](https://github.com/Taun0813)
-
-## 📞 Liên hệ
-
-- Email: your.email@example.com
+**Taun0813**
 - GitHub: [@Taun0813](https://github.com/Taun0813)
+- Email: [your.email@example.com](mailto:your.email@example.com)
 
 ## 🙏 Acknowledgments
 
-- Cảm ơn tất cả contributors
-- Cảm ơn các thư viện và framework đã sử dụng
-- Cảm ơn cộng đồng open source
+- Cảm ơn Spring Framework community
+- Cảm ơn tất cả contributors đã đóng góp cho dự án
+- Cảm ơn cộng đồng Java và Spring Boot Việt Nam
+
+## 🐛 Báo lỗi
+
+Nếu bạn phát hiện lỗi, vui lòng tạo [issue](https://github.com/Taun0813/Chat-Real-Time/issues) với thông tin chi tiết:
+
+- Phiên bản Java và Spring Boot
+- Log file và stack trace
+- Các bước tái hiện lỗi
+- Kết quả mong đợi và kết quả thực tế
+
+## 🔄 Phiên bản
+
+- **v1.0.0** - Phiên bản đầu tiên
+  - Chat real-time với Spring WebSocket
+  - Đăng ký/đăng nhập với Spring Security  
+  - H2 in-memory database
+  - Giao diện responsive
+
+## 🚧 Tính năng sắp tới
+
+- [ ] Persistent database (PostgreSQL/MySQL)
+- [ ] File upload và sharing
+- [ ] Private messaging
+- [ ] Chat history pagination
+- [ ] Online users status
+- [ ] Message reactions
+- [ ] Push notifications
+- [ ] Docker containerization
+- [ ] REST API documentation với Swagger
+
+## 🔍 API Endpoints
+
+### REST Endpoints
+- `GET /api/users` - Lấy danh sách users
+- `POST /api/auth/login` - Đăng nhập
+- `POST /api/auth/register` - Đăng ký
+- `GET /api/chatrooms` - Lấy danh sách phòng chat
+
+### WebSocket Endpoints  
+- `/ws` - WebSocket connection endpoint
+- `/app/chat.sendMessage` - Gửi tin nhắn
+- `/app/chat.addUser` - Thêm user vào phòng
+- `/topic/public` - Subscribe tin nhắn công khai
 
 ---
 
-## Acknowledgements
-
- - [Awesome Readme Templates](https://awesomeopensource.com/project/elangosundar/awesome-README-templates)
- - [Awesome README](https://github.com/matiassingers/awesome-readme)
- - [How to write a Good readme](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
-
+⭐ **Nếu dự án hữu ích, hãy cho một star để ủng hộ!** ⭐
